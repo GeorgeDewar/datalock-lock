@@ -17,6 +17,8 @@ char keys[ROWS][COLS] = {
 byte rowPins[ROWS] = {12, 11, 10, 9}; //connect to the row pinouts of the keypad
 byte colPins[COLS] = {8, 7, 6}; //connect to the column pinouts of the keypad
 
+const int PIN_LENGTH = 4;
+
 /*
  * Set up libraries
  */
@@ -27,9 +29,15 @@ rgb_lcd lcd;
  * Begin program
  */
 
+char pin[4];              // The digits of the PIN the user is currently typing
+int pinChar = 0;          // The digit of the PIN that the user is up to
+
 void enterPinEntryMode() {
   lcd.setColorWhite();
+  lcd.clear();
+  lcd.setCursor(0,0);
   lcd.print("Enter PIN: ");
+  pinChar = 0;
 }
 
 void setup() {
@@ -51,8 +59,15 @@ void loop() {
     char key = keypad.getKey();
   
     if (key){
-      Serial.println(key);
+      if(key == '*') return enterPinEntryMode();
+      
       lcd.print('*');
+      pin[pinChar++] = key;
+      if(pinChar == PIN_LENGTH){
+        // Compare PIN with correct PINs
+        enterPinEntryMode(); 
+      }
+      
     }
 }
 
