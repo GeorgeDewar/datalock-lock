@@ -28,9 +28,12 @@ rgb_lcd lcd;
 /*
  * Static data
  */
-const int     PIN_LENGTH   = 4;
-const char    RESET_KEY    = '*'; // The key that is pressed to reset the PIN entry
+const int     PIN_LENGTH    = 4;
+const char    RESET_KEY     = '*'; // The key that is pressed to reset the PIN entry
 const char    CORRECT_PIN[] = {'1','2','3','4'};
+
+const char    BT_END_CHAR   = '\n';
+const int     BT_MAX_BYTES  = 32;
 
 /*
  * Begin program
@@ -38,6 +41,20 @@ const char    CORRECT_PIN[] = {'1','2','3','4'};
 
 char pin[4];              // The digits of the PIN the user is currently typing
 int pinChar = 0;          // The digit of the PIN that the user is up to
+
+char bt_buffer[BT_MAX_BYTES]; // The buffer used to store a received message
+
+void setup() {
+    Serial.begin(57600);
+  
+    pinMode(DOOR_STRIKE_PIN, OUTPUT);
+    pinMode(PIR_PIN, INPUT);
+    
+    lcd.begin(16, 2);     // set up the LCD's number of columns and rows:
+    lcd.setColorAll();    // Turn backlight off
+       
+    enterPinEntryMode();
+}
 
 void clearAndPrint(String text){
   lcd.clear();
@@ -56,17 +73,6 @@ boolean checkPin(){
     if(pin[i] != CORRECT_PIN[i]) return false;
   }
   return true;
-}
-
-void setup() {
-    Serial.begin(9600);
-  
-    pinMode(DOOR_STRIKE_PIN, OUTPUT);
-    
-    lcd.begin(16, 2);     // set up the LCD's number of columns and rows:
-    lcd.setColorAll();    // Turn backlight off
-       
-    enterPinEntryMode();
 }
 
 /* See if a key has been pressed, and deal with it if so */
@@ -99,11 +105,12 @@ void checkForKey(){
 
 void loop() {
     checkForKey();
-    if(digitalRead(PIR_PIN)){
-      lcd.setRGB(0,0,255);
-    }
-    else{
-      lcd.setRGB(0,0,0);
+    if(Serial.available() > 0){
+      // We have a message
+      int len = Serial.readBytesUntil(BT_END_CHAR, bt_buffer, BT_MAX_BYTES);
+      // Get ID, message
+      char id[2] = {bt_buffer[0], bt_buffer[1]};
+      
     }
 }
 
