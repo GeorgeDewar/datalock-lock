@@ -16,7 +16,8 @@ char keys[ROWS][COLS] = {
 byte rowPins[ROWS] = {12, 11, 10, 9}; //connect to the row pinouts of the keypad
 byte colPins[COLS] = {8, 7, 6}; //connect to the column pinouts of the keypad
 
-const int DOOR_STRIKE_PIN = 2;
+const int DOOR_STRIKE_PIN   = 2;
+const int PIR_PIN           = 3;
 
 /*
  * Set up libraries
@@ -68,9 +69,9 @@ void setup() {
     enterPinEntryMode();
 }
 
-void loop() {
+/* See if a key has been pressed, and deal with it if so */
+void checkForKey(){
     char key = keypad.getKey();
-  
     if (key){
       if(key == RESET_KEY) return enterPinEntryMode();
       
@@ -92,9 +93,17 @@ void loop() {
           delay(500);
           return enterPinEntryMode();
         }
-         
       }
-      
+    }
+}
+
+void loop() {
+    checkForKey();
+    if(digitalRead(PIR_PIN)){
+      lcd.setRGB(0,0,255);
+    }
+    else{
+      lcd.setRGB(0,0,0);
     }
 }
 
