@@ -3,9 +3,8 @@
 #include <Keypad.h>
 
 /*
- * Set up static data
+ * Hardware configuration
  */
-
 const byte ROWS = 4; //four rows
 const byte COLS = 3; //three columns
 char keys[ROWS][COLS] = {
@@ -17,15 +16,20 @@ char keys[ROWS][COLS] = {
 byte rowPins[ROWS] = {12, 11, 10, 9}; //connect to the row pinouts of the keypad
 byte colPins[COLS] = {8, 7, 6}; //connect to the column pinouts of the keypad
 
-const int     PIN_LENGTH   = 4;
-const char    RESET_KEY    = '*'; // The key that is pressed to reset the PIN entry
-char    CORRECT_PIN[] = {'1','2','3','4'};
+const int DOOR_STRIKE_PIN = 2;
 
 /*
  * Set up libraries
  */
 Keypad keypad = Keypad( makeKeymap(keys), rowPins, colPins, ROWS, COLS );
 rgb_lcd lcd;
+
+/*
+ * Static data
+ */
+const int     PIN_LENGTH   = 4;
+const char    RESET_KEY    = '*'; // The key that is pressed to reset the PIN entry
+const char    CORRECT_PIN[] = {'1','2','3','4'};
 
 /*
  * Begin program
@@ -56,15 +60,11 @@ boolean checkPin(){
 void setup() {
     Serial.begin(9600);
   
-    // set up the LCD's number of columns and rows:
-    lcd.begin(16, 2);
+    pinMode(DOOR_STRIKE_PIN, OUTPUT);
     
-    // Turn backlight off
-    lcd.setColorAll();
-    
-    delay(1000);
-    // lcd.setRGB(r, g, b);
-    
+    lcd.begin(16, 2);     // set up the LCD's number of columns and rows:
+    lcd.setColorAll();    // Turn backlight off
+       
     enterPinEntryMode();
 }
 
@@ -81,7 +81,9 @@ void loop() {
         if(checkPin()){
           lcd.setRGB(0,255,0);
           clearAndPrint("Welcome, friend :-)");
-          delay(500);
+          digitalWrite(DOOR_STRIKE_PIN, HIGH);
+          delay(1000);
+          digitalWrite(DOOR_STRIKE_PIN, LOW);
           return enterPinEntryMode();
         }
         else{
