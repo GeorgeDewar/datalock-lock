@@ -18,6 +18,7 @@ byte rowPins[ROWS] = {12, 11, 10, 9}; //connect to the row pinouts of the keypad
 byte colPins[COLS] = {8, 7, 6}; //connect to the column pinouts of the keypad
 
 const int PIN_LENGTH = 4;
+const char RESET_KEY = '*'; // The key that is pressed to reset the PIN entry
 
 /*
  * Set up libraries
@@ -59,7 +60,7 @@ void loop() {
     char key = keypad.getKey();
   
     if (key){
-      if(key == '*') return enterPinEntryMode();
+      if(key == RESET_KEY) return enterPinEntryMode();
       
       lcd.print('*');
       pin[pinChar++] = key;
