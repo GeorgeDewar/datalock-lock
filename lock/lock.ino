@@ -2,6 +2,10 @@
 #include "rgb_lcd.h"
 #include <Keypad.h>
 
+/*
+ * Set up static data
+ */
+
 const byte ROWS = 4; //four rows
 const byte COLS = 3; //three columns
 char keys[ROWS][COLS] = {
@@ -23,13 +27,24 @@ rgb_lcd lcd;
  * Begin program
  */
 
+void enterPinEntryMode() {
+  lcd.setColorWhite();
+  lcd.print("Enter PIN: ");
+}
+
 void setup() {
     Serial.begin(9600);
   
     // set up the LCD's number of columns and rows:
     lcd.begin(16, 2);
-    // Print a message to the LCD.
-    lcd.print("hello, world!");
+    
+    // Turn backlight off
+    lcd.setColorAll();
+    
+    delay(1000);
+    // lcd.setRGB(r, g, b);
+    
+    enterPinEntryMode();
 }
 
 void loop() {
@@ -37,7 +52,7 @@ void loop() {
   
     if (key){
       Serial.println(key);
-      lcd.print(key);
+      lcd.print('*');
     }
 }
 
