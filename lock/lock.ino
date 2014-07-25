@@ -17,8 +17,9 @@ char keys[ROWS][COLS] = {
 byte rowPins[ROWS] = {12, 11, 10, 9}; //connect to the row pinouts of the keypad
 byte colPins[COLS] = {8, 7, 6}; //connect to the column pinouts of the keypad
 
-const int PIN_LENGTH = 4;
-const char RESET_KEY = '*'; // The key that is pressed to reset the PIN entry
+const int     PIN_LENGTH   = 4;
+const char    RESET_KEY    = '*'; // The key that is pressed to reset the PIN entry
+char    CORRECT_PIN[] = {'1','2','3','4'};
 
 /*
  * Set up libraries
@@ -33,12 +34,23 @@ rgb_lcd lcd;
 char pin[4];              // The digits of the PIN the user is currently typing
 int pinChar = 0;          // The digit of the PIN that the user is up to
 
-void enterPinEntryMode() {
-  lcd.setColorWhite();
+void clearAndPrint(String text){
   lcd.clear();
   lcd.setCursor(0,0);
-  lcd.print("Enter PIN: ");
+  lcd.print(text);
+}
+
+void enterPinEntryMode() {
+  lcd.setColorWhite();
+  clearAndPrint("Enter PIN: ");
   pinChar = 0;
+}
+
+boolean checkPin(){
+  for(int i=0; i<PIN_LENGTH; i++){
+    if(pin[i] != CORRECT_PIN[i]) return false;
+  }
+  return true;
 }
 
 void setup() {
@@ -66,7 +78,19 @@ void loop() {
       pin[pinChar++] = key;
       if(pinChar == PIN_LENGTH){
         // Compare PIN with correct PINs
-        enterPinEntryMode(); 
+        if(checkPin()){
+          lcd.setRGB(0,255,0);
+          clearAndPrint("Welcome, friend :-)");
+          delay(500);
+          return enterPinEntryMode();
+        }
+        else{
+          lcd.setRGB(255,0,0);
+          clearAndPrint("Incorrect PIN!");
+          delay(500);
+          return enterPinEntryMode();
+        }
+         
       }
       
     }
