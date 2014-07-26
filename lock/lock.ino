@@ -36,9 +36,9 @@ const char TOUCH_OUTDOOR_PIN = 3;
 #define KEY       "DataC0mp2014!"
 #define AUTH      WIFLY_AUTH_WPA2_PSK
 
-#define HTTP_GET_URL "http://172.26.75.139:3000/messages/poll"
-#define HTTP_POST_URL "http://172.26.75.139:3000/messages/confirm"
-#define HTTP_LOG_URL "http://172.26.75.139:3000/events/log"
+#define HTTP_GET_URL "http://d.s0rs.net:3000/messages/poll"
+#define HTTP_POST_URL "http://d.s0rs.net:3000/messages/confirm"
+#define HTTP_LOG_URL "http://d.s0rs.net:3000/events/log"
 
 /*
  * Set up libraries
