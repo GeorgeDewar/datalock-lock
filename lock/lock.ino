@@ -121,6 +121,16 @@ void enterPinEntryMode() {
 }
 
 boolean checkPin(char supplied_pin[], char correct_pin[]){
+  Serial.print("Entered PIN: ");
+  for(int i=0; i<PIN_LENGTH; i++){
+    Serial.print(supplied_pin[i]);
+  }
+  Serial.print(" ");
+  for(int i=0; i<PIN_LENGTH; i++){
+    Serial.print(correct_pin[i]);
+  }
+  Serial.println();
+  
   for(int i=0; i<PIN_LENGTH; i++){
     if(supplied_pin[i] != correct_pin[i]) return false;
   }
@@ -131,7 +141,7 @@ boolean checkPin(){
   for(int i=0; i<MAX_USERS; i++){
     if(!userExists(i)) continue;
     for(int j=0; j<PIN_LENGTH; j++){
-      user_pin[j] = userRead(i, 2 + j);
+      user_pin[j] = userRead(i, 3 + j);
     }
     if(checkPin(pin, user_pin)) return true;
   }
