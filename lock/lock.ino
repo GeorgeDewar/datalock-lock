@@ -3,10 +3,10 @@
 #include <Keypad.h>
 #include <Arduino.h>
 #include <SoftwareSerial.h>
-#include "Debug.h"
 #include <WiFly.h>
 #include "WiflyHTTPClient.h"
 #include <EEPROM.h>
+#include "Seeed_QTouch.h"
 
 /*
  * Hardware configuration
@@ -26,6 +26,9 @@ const int DOOR_STRIKE_PIN   = 2;
 const int PIR_PIN           = 3;
 const int WIFLY_RX_PIN      = 4;
 const int WIFLY_TX_PIN      = 5;
+const int INDOOR_BUTTON     = 14;
+
+const int TOUCH_OUTDOOR_PIN = 3;
 
 #define SSID      "DATACOMP"
 #define KEY       "DataC0mp2014!"
@@ -48,28 +51,32 @@ HTTPClient http;
  */
 const int     PIN_LENGTH    = 4;
 const char    RESET_KEY     = '*'; // The key that is pressed to reset the PIN entry
-char    CORRECT_PIN[] = {'1','2','3','4'};
-
-const char    BT_END_CHAR   = '\n';
-const int     BT_MAX_BYTES  = 8;
+char          CORRECT_PIN[] = {'1','2','3','4'};
 
 const int     HTTP_MAX_BYTES = 32;
+const int     MAX_USERS      = 8;
+const int     UNLOCK_TIME    = 10000;
+const int     POLL_FREQUENCY = 5000;
 
-const int     MAX_USERS = 8;
+const int     MODE_PIN       = 0;
+const int     MODE_OPEN      = 1;
 
 /*
  * Begin program
  */
 
 char pin[4];              // The digits of the PIN the user is currently typing
-int pinChar = 0;          // The digit of the PIN that the user is up to
+char pinChar = 0;          // The digit of the PIN that the user is up to
 
-char bt_buffer[BT_MAX_BYTES]; // The buffer used to store a received message from a phone
 char http_buffer[HTTP_MAX_BYTES]; // The buffer used to store a received message over HTTP
 
 unsigned long timeSinceLastPoll = 0;
+unsigned long unlocked_at       = 0;
+
 char cursorX = 0;
 char cursorY = 0;
+
+char mode = MODE_PIN;
 
 void setup() {
     Serial.begin(9600);
@@ -77,9 +84,12 @@ void setup() {
   
     pinMode(DOOR_STRIKE_PIN, OUTPUT);
     pinMode(PIR_PIN, INPUT);
+    pinMode(INDOOR_BUTTON, INPUT);
     
     lcd.begin(16, 2);     // set up the LCD's number of columns and rows:
     lcd.setColorAll();    // Turn backlight off
+    
+    QTouch.calibrate();
     
     joinNetwork();   
     enterPinEntryMode();
@@ -121,6 +131,7 @@ void enterPinEntryMode() {
   clearAndPrint("Enter PIN: ");
   setCursor(0,1);
   pinChar = 0;
+  mode = MODE_PIN;
 }
 
 boolean checkPin(char supplied_pin[], char correct_pin[]){
@@ -155,10 +166,14 @@ int checkPin(){
 void unlockDoor(String message){
   lcd.setRGB(0,255,0);
   clearAndPrint(message);
-  digitalWrite(DOOR_STRIKE_PIN, HIGH);
-  delay(2000);
+  mode = MODE_OPEN;
+  unlocked_at = millis();
+}
+
+void relockDoor() {
+  Serial.println("Relock");
+  enterPinEntryMode(); 
   digitalWrite(DOOR_STRIKE_PIN, LOW);
-  enterPinEntryMode();
 }
 
 /* See if a key has been pressed, and deal with it if so */
@@ -374,13 +389,23 @@ void checkForRemoteMessage() {
 }
 
 void checkForButton(){
-  if(digitalRead(14)) unlockDoor("Inside"); 
+  if(digitalRead(INDOOR_BUTTON)) unlockDoor("Inside"); 
+}
+
+void checkForTouch(){
+   digitalWrite(DOOR_STRIKE_PIN, QTouch.isTouch(TOUCH_OUTDOOR_PIN)); 
 }
 
 void loop() {
-    checkForKey();
-    checkForButton();
-    if(millis() - timeSinceLastPoll > 5000) checkForRemoteMessage();
+    if(mode == MODE_OPEN){
+      checkForTouch(); 
+      if(millis() - unlocked_at > UNLOCK_TIME) relockDoor();
+    }
+    else{
+      checkForKey();
+      checkForButton();
+      if((millis() - timeSinceLastPoll > POLL_FREQUENCY) && (pinChar == 0)) checkForRemoteMessage(); // only if not typing in PIN
     
+    }
 }
 
