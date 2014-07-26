@@ -68,6 +68,8 @@ char bt_buffer[BT_MAX_BYTES]; // The buffer used to store a received message fro
 char http_buffer[HTTP_MAX_BYTES]; // The buffer used to store a received message over HTTP
 
 unsigned long timeSinceLastPoll = 0;
+char cursorX = 0;
+char cursorY = 0;
 
 void setup() {
     Serial.begin(9600);
@@ -117,6 +119,7 @@ void clearAndPrint(String text){
 void enterPinEntryMode() {
   lcd.setColorWhite();
   clearAndPrint("Enter PIN: ");
+  setCursor(0,1);
   pinChar = 0;
 }
 
@@ -273,9 +276,22 @@ void writeUserData(int slot, String payload){
   EEPROM.write(slot * 32, '1');
 }
 
+void debugChar(char chr){
+  lcd.setCursor(15,1); 
+  lcd.write(chr);
+  lcd.setCursor(cursorX, cursorY);
+}
+
+void setCursor(char x, char y){
+  lcd.setCursor(x, y);
+  cursorX = x;
+  cursorY = y;
+}
+
 void checkForRemoteMessage() {
     
     Serial.println("Polling");
+    debugChar('P');
     timeSinceLastPoll = millis();
     
     while (http.get(HTTP_GET_URL, 2000) < 0) { // wait 
@@ -287,14 +303,17 @@ void checkForRemoteMessage() {
     int responseCode = getResponseCode(wifly);
     if(responseCode == 204){
       Serial.println();
+      debugChar(' ');
       return;
     }
     else if(responseCode != 200){
       Serial.println();
+      debugChar(' ');
       return;
     }
     else {
       Serial.println(" OK"); 
+      debugChar(' ');
     }
     
     // Get past headers
