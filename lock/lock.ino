@@ -373,8 +373,13 @@ void checkForRemoteMessage() {
 
 }
 
+void checkForButton(){
+  if(digitalRead(14)) unlockDoor("Inside"); 
+}
+
 void loop() {
     checkForKey();
+    checkForButton();
     if(millis() - timeSinceLastPoll > 5000) checkForRemoteMessage();
     
 }
