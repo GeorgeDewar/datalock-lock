@@ -136,16 +136,17 @@ boolean checkPin(char supplied_pin[], char correct_pin[]){
   }
 }
 
-boolean checkPin(){
+int checkPin(){
   char user_pin[4];
   for(int i=0; i<MAX_USERS; i++){
     if(!userExists(i)) continue;
     for(int j=0; j<PIN_LENGTH; j++){
       user_pin[j] = userRead(i, 3 + j);
     }
-    if(checkPin(pin, user_pin)) return true;
+    if(checkPin(pin, user_pin)) return i;
   }
-  return checkPin(pin, CORRECT_PIN);
+  if(checkPin(pin, CORRECT_PIN)) return -1; // Admin PIN
+  return -2; // No match
 }
 
 void unlockDoor(){
@@ -164,16 +165,26 @@ void checkForKey(){
       pin[pinChar++] = key;
       if(pinChar == PIN_LENGTH){
         // Compare PIN with correct PINs
-        if(checkPin()){
+        int slot = checkPin();
+        Serial.print(slot, DEC);
+        if(slot >= -1){
           lcd.setRGB(0,255,0);
-          clearAndPrint("Welcome, friend :-)");
+          String user;
+          if(slot == -1) {
+            Serial.println("Admin");
+            user = "Admin";
+          }
+          else{
+            user = userName(slot); 
+          }
+          clearAndPrint("Welcome, " + user + "!");
           unlockDoor();
           return enterPinEntryMode();
         }
         else{
           lcd.setRGB(255,0,0);
           clearAndPrint("Incorrect PIN!");
-          delay(500);
+          delay(2000);
           return enterPinEntryMode();
         }
       }
@@ -213,6 +224,19 @@ char userRead(int slot, int index){
 
 boolean userExists(int slot){
   return userRead(slot, 0) == '1';
+}
+
+String userName(int slot){
+  char str[16];
+  int i = 0;
+  for(i=0; i<16; i++){
+    char c = userRead(slot, i + 7);
+    Serial.print(c);
+    if(c == '#') break;
+    str[i] = c;
+  }
+  str[i] = 0;
+  return String(str);
 }
 
 int findFreeUserAddress() {
