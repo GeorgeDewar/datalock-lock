@@ -27,8 +27,8 @@ const int PIR_PIN           = 3;
 const int WIFLY_RX_PIN      = 4;
 const int WIFLY_TX_PIN      = 5;
 
-#define SSID      "Door-A-Com"
-#define KEY       "qwerty0987"
+#define SSID      "DATACOMP"
+#define KEY       "DataC0mp2014!"
 #define AUTH      WIFLY_AUTH_WPA2_PSK
 
 #define HTTP_GET_URL "http://172.26.75.139:3000/messages/poll"
@@ -66,6 +66,8 @@ int pinChar = 0;          // The digit of the PIN that the user is up to
 
 char bt_buffer[BT_MAX_BYTES]; // The buffer used to store a received message from a phone
 char http_buffer[HTTP_MAX_BYTES]; // The buffer used to store a received message over HTTP
+
+unsigned long timeSinceLastPoll = 0;
 
 void setup() {
     Serial.begin(9600);
@@ -211,8 +213,16 @@ int findFreeUserAddress() {
 }
 
 int findUser(String id){
+  Serial.println("Looking for user" + id);
   for(int i=0; i<MAX_USERS; i++){
-    if(userExists(i) && EEPROM.read(i * 32 + 1) == id.charAt(0) && EEPROM.read(i * 32 + 1) == id.charAt(1)) return i;
+    Serial.print(i, DEC);
+    Serial.print(userExists(i), DEC);
+    if(userExists(i)){
+      Serial.print((char) EEPROM.read(i * 32 + 1));
+      Serial.print((char) EEPROM.read(i * 32 + 2));
+      if(EEPROM.read(i * 32 + 1) == id.charAt(0) && EEPROM.read(i * 32 + 2) == id.charAt(1)) return i;
+    }
+    
   }
   return -1;
 }
@@ -220,6 +230,7 @@ int findUser(String id){
 void checkForRemoteMessage() {
     
     Serial.println("Polling");
+    timeSinceLastPoll = millis();
     
     while (http.get(HTTP_GET_URL, 2000) < 0) { // wait 
     }
@@ -229,9 +240,11 @@ void checkForRemoteMessage() {
     // Read response code
     int responseCode = getResponseCode(wifly);
     if(responseCode == 204){
+      Serial.println();
       return;
     }
     else if(responseCode != 200){
+      Serial.println();
       return;
     }
     else {
@@ -255,27 +268,34 @@ void checkForRemoteMessage() {
     String id = response.substring(0, 2);
     String command = response.substring(2, 5);
     Serial.println(id + " " + command);
+    Serial.println(command.length(), DEC);
     
     if(command.equals("UNL")){
       unlockDoor();
     }
     else if(command.equals("USR")){
-      String userId = command.substring(5, 7);
+      String payload = response.substring(5);
+      String userId = payload.substring(0, 2);
       int slot;
-      if(slot = findUser(id) >= 0){
+      if(slot = findUser(userId) >= 0){
         Serial.println("Updating user");
         // Copy to EEPROM
-        for(int i=0; i<command.length() - 5; i++){
-          EEPROM.write(slot * 32 + i + 1, command.charAt(i + 5));
+        for(int i=0; i<payload.length(); i++){
+          Serial.write(payload.charAt(i));
+          EEPROM.write(slot * 32 + i + 1, payload.charAt(i));
         }
         EEPROM.write(slot * 32, '1');
       }
       else{
         Serial.println("Adding user");
+        
         if(slot = findFreeUserAddress() >= 0){
           // Copy to EEPROM
-          for(int i=0; i<command.length() - 5; i++){
-            EEPROM.write(slot * 32 + i + 1, command.charAt(i + 5));
+          Serial.print("Slot ");
+          Serial.println(slot, DEC);
+          for(int i=0; i<payload.length(); i++){
+            Serial.write(payload.charAt(i));
+            EEPROM.write(slot * 32 + i + 1, payload.charAt(i));
           }
           EEPROM.write(slot * 32, '1');
         }
@@ -299,7 +319,7 @@ void checkForRemoteMessage() {
 
 void loop() {
     checkForKey();
-    checkForRemoteMessage();
+    if(millis() - timeSinceLastPoll > 5000) checkForRemoteMessage();
     
 }
 
