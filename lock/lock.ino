@@ -417,11 +417,11 @@ void checkForRemoteMessage() {
 }
 
 void checkForButton(){
-  if(digitalRead(INDOOR_BUTTON)) unlockDoor("Inside"); 
+  digitalWrite(DOOR_STRIKE_PIN, digitalRead(INDOOR_BUTTON));
 }
 
 void checkForTouch(){
-   digitalWrite(DOOR_STRIKE_PIN, QTouch.isTouch(TOUCH_OUTDOOR_PIN)); 
+   digitalWrite(DOOR_STRIKE_PIN, QTouch.isTouch(TOUCH_OUTDOOR_PIN) || digitalRead(INDOOR_BUTTON)); 
 }
 
 void checkForMotion(){
