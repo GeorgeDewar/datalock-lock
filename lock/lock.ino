@@ -52,9 +52,11 @@ HTTPClient http;
 const int     PIN_LENGTH    = 4;
 const char    RESET_KEY     = '*'; // The key that is pressed to reset the PIN entry
 char          CORRECT_PIN[] = {'1','2','3','4'};
+const char    MAX_PIN_TRIES = 3;
+const int     LOCKOUT_TIME  = 10000;
 
-const int     HTTP_MAX_BYTES = 32;
-const int     MAX_USERS      = 8;
+const char    HTTP_MAX_BYTES = 32;
+const char    MAX_USERS      = 8;
 const int     UNLOCK_TIME    = 10000;
 const int     POLL_FREQUENCY = 5000;
 
@@ -66,7 +68,8 @@ const int     MODE_OPEN      = 1;
  */
 
 char pin[4];              // The digits of the PIN the user is currently typing
-char pinChar = 0;          // The digit of the PIN that the user is up to
+char pinChar = 0;         // The digit of the PIN that the user is up to
+char pinTries = 0;        // The number of attempts the user has made to enter the correct PIN
 
 char http_buffer[HTTP_MAX_BYTES]; // The buffer used to store a received message over HTTP
 
@@ -204,6 +207,16 @@ void checkForKey(){
           lcd.setRGB(255,0,0);
           clearAndPrint("Incorrect PIN!");
           delay(2000);
+          pinTries++;
+          
+          if(pinTries == MAX_PIN_TRIES){
+             clearAndPrint(" GET AWAY THIEF");
+             setCursor(0,1);
+             lcd.print(" OWNER NOTIFIED");
+             delay(LOCKOUT_TIME);
+             pinTries = 0;
+          }
+          
           return enterPinEntryMode();
         }
       }
