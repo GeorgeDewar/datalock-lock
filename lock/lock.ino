@@ -6,6 +6,7 @@
 #include "Debug.h"
 #include <WiFly.h>
 #include "WiflyHTTPClient.h"
+#include <EEPROM.h>
 
 /*
  * Hardware configuration
@@ -47,12 +48,14 @@ HTTPClient http;
  */
 const int     PIN_LENGTH    = 4;
 const char    RESET_KEY     = '*'; // The key that is pressed to reset the PIN entry
-const char    CORRECT_PIN[] = {'1','2','3','4'};
+char    CORRECT_PIN[] = {'1','2','3','4'};
 
 const char    BT_END_CHAR   = '\n';
-const int     BT_MAX_BYTES  = 32;
+const int     BT_MAX_BYTES  = 8;
 
 const int     HTTP_MAX_BYTES = 32;
+
+const int     MAX_USERS = 8;
 
 /*
  * Begin program
@@ -77,17 +80,23 @@ void setup() {
     joinNetwork();   
     enterPinEntryMode();
     
+    if(EEPROM.read(511) != '1'){
+      // Initialize EEPROM
+      for(int i=0; i<511; i++){
+        EEPROM.write(i, 0); 
+      }
+      EEPROM.write(511, '1');
+    }
 }
 
 void joinNetwork(){
   if (!wifly.isAssociated(SSID)) {
-    Serial.println("Connecting");
+    Serial.println("WiFi Connecting");
     while (!wifly.join(SSID, KEY, AUTH)) {
-      Serial.println("Failed to join " SSID);
-      Serial.println("Wait 0.1 second and try again...");
+      Serial.println("Failed");
       delay(100);
     }
-    Serial.println("WiFi Connected");
+    Serial.println("OK");
     
     wifly.save();    // save configuration
   }
@@ -109,11 +118,22 @@ void enterPinEntryMode() {
   pinChar = 0;
 }
 
-boolean checkPin(){
+boolean checkPin(char supplied_pin[], char correct_pin[]){
   for(int i=0; i<PIN_LENGTH; i++){
-    if(pin[i] != CORRECT_PIN[i]) return false;
+    if(supplied_pin[i] != correct_pin[i]) return false;
   }
-  return true;
+}
+
+boolean checkPin(){
+  char user_pin[4];
+  for(int i=0; i<MAX_USERS; i++){
+    if(!userExists(i)) continue;
+    for(int j=0; j<PIN_LENGTH; j++){
+      user_pin[j] = userRead(i, 2 + j);
+    }
+    if(checkPin(pin, user_pin)) return true;
+  }
+  return checkPin(pin, CORRECT_PIN);
 }
 
 void unlockDoor(){
@@ -175,9 +195,31 @@ void getPastHeaders(WiFly wifly){
   }
 }
 
+char userRead(int slot, int index){
+  return EEPROM.read(slot * 32 + index);
+}
+
+boolean userExists(int slot){
+  return userRead(slot, 0) == '1';
+}
+
+int findFreeUserAddress() {
+  for(int i=0; i<MAX_USERS; i++){
+    if(!userExists(i)) return i;
+  }
+  return -1;
+}
+
+int findUser(String id){
+  for(int i=0; i<MAX_USERS; i++){
+    if(userExists(i) && EEPROM.read(i * 32 + 1) == id.charAt(0) && EEPROM.read(i * 32 + 1) == id.charAt(1)) return i;
+  }
+  return -1;
+}
+
 void checkForRemoteMessage() {
     
-    Serial.println("Checking for messages...");
+    Serial.println("Polling");
     
     while (http.get(HTTP_GET_URL, 2000) < 0) { // wait 
     }
@@ -187,11 +229,9 @@ void checkForRemoteMessage() {
     // Read response code
     int responseCode = getResponseCode(wifly);
     if(responseCode == 204){
-      Serial.println(" No content");
       return;
     }
     else if(responseCode != 200){
-      Serial.println(" Error" + responseCode);
       return;
     }
     else {
@@ -219,12 +259,38 @@ void checkForRemoteMessage() {
     if(command.equals("UNL")){
       unlockDoor();
     }
+    else if(command.equals("USR")){
+      String userId = command.substring(5, 7);
+      int slot;
+      if(slot = findUser(id) >= 0){
+        Serial.println("Updating user");
+        // Copy to EEPROM
+        for(int i=0; i<command.length() - 5; i++){
+          EEPROM.write(slot * 32 + i + 1, command.charAt(i + 5));
+        }
+        EEPROM.write(slot * 32, '1');
+      }
+      else{
+        Serial.println("Adding user");
+        if(slot = findFreeUserAddress() >= 0){
+          // Copy to EEPROM
+          for(int i=0; i<command.length() - 5; i++){
+            EEPROM.write(slot * 32 + i + 1, command.charAt(i + 5));
+          }
+          EEPROM.write(slot * 32, '1');
+        }
+        else{
+          Serial.println("No space");
+          return;
+        }
+      }
+    }
     else{
-      Serial.println("Invalid command: " + command);
+      Serial.println("Invalid CMD: " + command);
       return;
     }
     
-    Serial.println("Acknowledging message " + id);
+    Serial.println("ACK " + id);
     while (http.post(HTTP_POST_URL, new char[2] {id.charAt(0), id.charAt(1)}, 10000) < 0) {
     }
   
