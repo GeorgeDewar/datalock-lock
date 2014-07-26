@@ -59,6 +59,7 @@ const char    HTTP_MAX_BYTES = 32;
 const char    MAX_USERS      = 8;
 const int     UNLOCK_TIME    = 10000;
 const int     POLL_FREQUENCY = 5000;
+const int     MOTION_TIMEOUT = 15000;
 
 const int     MODE_PIN       = 0;
 const int     MODE_OPEN      = 1;
@@ -73,11 +74,13 @@ char pinTries = 0;        // The number of attempts the user has made to enter t
 
 char http_buffer[HTTP_MAX_BYTES]; // The buffer used to store a received message over HTTP
 
-unsigned long timeSinceLastPoll = 0;
-unsigned long unlocked_at       = 0;
+unsigned long timeSinceLastPoll  = 0;
+unsigned long unlocked_at        = 0;
+unsigned long timeMotionLastSeen = 0;
 
 char cursorX = 0;
 char cursorY = 0;
+char colorR = 0, colorG = 0, colorB = 0;
 
 char mode = MODE_PIN;
 
@@ -90,7 +93,8 @@ void setup() {
     pinMode(INDOOR_BUTTON, INPUT);
     
     lcd.begin(16, 2);     // set up the LCD's number of columns and rows:
-    lcd.setColorAll();    // Turn backlight off
+    lcd.setColorWhite();    // Turn backlight off
+    lcd.print("Connecting...");
     
     QTouch.calibrate();
     
@@ -130,7 +134,7 @@ void clearAndPrint(String text){
 }
 
 void enterPinEntryMode() {
-  lcd.setColorWhite();
+  setColor(255,255,255);
   clearAndPrint("Enter PIN: ");
   setCursor(0,1);
   pinChar = 0;
@@ -167,7 +171,7 @@ int checkPin(){
 }
 
 void unlockDoor(String message){
-  lcd.setRGB(0,255,0);
+  setColor(0,255,0);
   clearAndPrint(message);
   mode = MODE_OPEN;
   unlocked_at = millis();
@@ -192,7 +196,7 @@ void checkForKey(){
         int slot = checkPin();
         Serial.print(slot, DEC);
         if(slot >= -1){
-          lcd.setRGB(0,255,0);
+          setColor(0,255,0);
           String user;
           if(slot == -1) {
             Serial.println("Admin");
@@ -204,7 +208,7 @@ void checkForKey(){
           return unlockDoor("Welcome, " + user + "!");
         }
         else{
-          lcd.setRGB(255,0,0);
+          setColor(255,0,0);
           clearAndPrint("Incorrect PIN!");
           delay(2000);
           pinTries++;
@@ -311,6 +315,13 @@ void debugChar(char chr){
   lcd.setCursor(cursorX, cursorY);
 }
 
+void setColor(unsigned char r, unsigned char g, unsigned char b){
+  colorR = r;
+  colorG = g;
+  colorB = b;
+  lcd.setRGB(r,g,b);
+}
+
 void setCursor(char x, char y){
   lcd.setCursor(x, y);
   cursorX = x;
@@ -409,7 +420,12 @@ void checkForTouch(){
    digitalWrite(DOOR_STRIKE_PIN, QTouch.isTouch(TOUCH_OUTDOOR_PIN)); 
 }
 
+void checkForMotion(){
+  if(digitalRead(PIR_PIN)) timeMotionLastSeen = millis(); 
+}
+
 void loop() {
+    checkForMotion();
     if(mode == MODE_OPEN){
       checkForTouch(); 
       if(millis() - unlocked_at > UNLOCK_TIME) relockDoor();
@@ -418,7 +434,12 @@ void loop() {
       checkForKey();
       checkForButton();
       if((millis() - timeSinceLastPoll > POLL_FREQUENCY) && (pinChar == 0)) checkForRemoteMessage(); // only if not typing in PIN
-    
+      if((millis() - timeMotionLastSeen) > MOTION_TIMEOUT){
+        lcd.setColorAll();
+      }
+      else{
+        lcd.setRGB(colorR, colorG, colorB);
+      }
     }
 }
 
