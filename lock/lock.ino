@@ -206,7 +206,7 @@ void beep(int duration){
 void checkForKey(){
     char key = keypad.getKey();
     if (key){
-      beep(20);
+      if(pinChar + 1 < PIN_LENGTH) beep(20);
       if(key == RESET_KEY) return enterPinEntryMode();
       
       lcd.print('*');
@@ -431,6 +431,14 @@ void checkForRemoteMessage() {
           return;
         }
       }
+    }
+    else if(command.equals("RMU")){
+       String userId = response.substring(0, 2);
+       int slot = findUser(userId);
+       if(slot >= 0){
+        Serial.println(F("Deleting user"));
+        EEPROM.write(slot * 32, 0);
+       }
     }
     else{
       Serial.println("Invalid CMD: " + command);
