@@ -89,7 +89,7 @@ void joinNetwork(){
     }
     Serial.println("WiFi Connected");
     
-    wifly.save();    // save configuration, 
+    wifly.save();    // save configuration
   }
 }
 
@@ -116,6 +116,12 @@ boolean checkPin(){
   return true;
 }
 
+void unlockDoor(){
+  digitalWrite(DOOR_STRIKE_PIN, HIGH);
+  delay(2000);
+  digitalWrite(DOOR_STRIKE_PIN, LOW);
+}
+
 /* See if a key has been pressed, and deal with it if so */
 void checkForKey(){
     char key = keypad.getKey();
@@ -129,9 +135,7 @@ void checkForKey(){
         if(checkPin()){
           lcd.setRGB(0,255,0);
           clearAndPrint("Welcome, friend :-)");
-          digitalWrite(DOOR_STRIKE_PIN, HIGH);
-          delay(1000);
-          digitalWrite(DOOR_STRIKE_PIN, LOW);
+          unlockDoor();
           return enterPinEntryMode();
         }
         else{
@@ -173,8 +177,7 @@ void getPastHeaders(WiFly wifly){
 
 void checkForRemoteMessage() {
     
-    Serial.println("\r\nTry to get url - " HTTP_GET_URL);
-    Serial.println("------------------------------");
+    Serial.println("Checking for messages...");
     
     while (http.get(HTTP_GET_URL, 2000) < 0) { // wait 
     }
@@ -207,16 +210,25 @@ void checkForRemoteMessage() {
   
     http_buffer[index] = 0;
     String response = String(http_buffer);
-
     Serial.println(response);
+
+    String id = response.substring(0, 2);
+    String command = response.substring(2, 5);
+    Serial.println(id + " " + command);
+    
+    if(command.equals("UNL")){
+      unlockDoor();
+    }
+    else{
+      Serial.println("Invalid command: " + command);
+      return;
+    }
+    
+    Serial.println("Acknowledging message " + id);
+    while (http.post(HTTP_POST_URL, new char[2] {id.charAt(0), id.charAt(1)}, 10000) < 0) {
+    }
   
-    //Serial.println("\r\n\r\nTry to post data to url - " HTTP_POST_URL);
-    //Serial.println("-------------------------------");
-    //while (http.post(HTTP_POST_URL, new char[3] {'a','b','c'}, 10000) < 0) {
-    //}
-    //while (wifly.receive((uint8_t *)&c, 1, 1000) == 1) {
-      //Serial.print(get);
-    //}
+
 }
 
 void loop() {
