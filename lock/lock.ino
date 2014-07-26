@@ -152,10 +152,13 @@ int checkPin(){
   return -2; // No match
 }
 
-void unlockDoor(){
+void unlockDoor(String message){
+  lcd.setRGB(0,255,0);
+  clearAndPrint(message);
   digitalWrite(DOOR_STRIKE_PIN, HIGH);
   delay(2000);
   digitalWrite(DOOR_STRIKE_PIN, LOW);
+  enterPinEntryMode();
 }
 
 /* See if a key has been pressed, and deal with it if so */
@@ -180,9 +183,7 @@ void checkForKey(){
           else{
             user = userName(slot); 
           }
-          clearAndPrint("Welcome, " + user + "!");
-          unlockDoor();
-          return enterPinEntryMode();
+          return unlockDoor("Welcome, " + user + "!");
         }
         else{
           lcd.setRGB(255,0,0);
@@ -336,7 +337,7 @@ void checkForRemoteMessage() {
     Serial.println(command.length(), DEC);
     
     if(command.equals("UNL")){
-      unlockDoor();
+      unlockDoor("Remote Unlock");
     }
     else if(command.equals("USR")){
       String payload = response.substring(5);
