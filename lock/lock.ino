@@ -217,6 +217,8 @@ boolean userExists(int slot){
 
 int findFreeUserAddress() {
   for(int i=0; i<MAX_USERS; i++){
+    Serial.print(i, DEC);
+    Serial.println(userExists(i), DEC);
     if(!userExists(i)) return i;
   }
   return -1;
@@ -235,6 +237,16 @@ int findUser(String id){
     
   }
   return -1;
+}
+
+void writeUserData(int slot, String payload){
+  Serial.print("Slot ");
+  Serial.println(slot, DEC);
+  for(int i=0; i<payload.length(); i++){
+    Serial.write(payload.charAt(i));
+    EEPROM.write(slot * 32 + i + 1, payload.charAt(i));
+  }
+  EEPROM.write(slot * 32, '1');
 }
 
 void checkForRemoteMessage() {
@@ -286,28 +298,18 @@ void checkForRemoteMessage() {
     else if(command.equals("USR")){
       String payload = response.substring(5);
       String userId = payload.substring(0, 2);
-      int slot;
-      if(slot = findUser(userId) >= 0){
+      int slot = findUser(userId);
+      if(slot >= 0){
         Serial.println("Updating user");
         // Copy to EEPROM
-        for(int i=0; i<payload.length(); i++){
-          Serial.write(payload.charAt(i));
-          EEPROM.write(slot * 32 + i + 1, payload.charAt(i));
-        }
-        EEPROM.write(slot * 32, '1');
+        writeUserData(slot, payload);
       }
       else{
         Serial.println("Adding user");
-        
-        if(slot = findFreeUserAddress() >= 0){
+        slot = findFreeUserAddress();
+        if(slot >= 0){
           // Copy to EEPROM
-          Serial.print("Slot ");
-          Serial.println(slot, DEC);
-          for(int i=0; i<payload.length(); i++){
-            Serial.write(payload.charAt(i));
-            EEPROM.write(slot * 32 + i + 1, payload.charAt(i));
-          }
-          EEPROM.write(slot * 32, '1');
+          writeUserData(slot, payload);
         }
         else{
           Serial.println("No space");
