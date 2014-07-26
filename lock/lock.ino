@@ -7,6 +7,7 @@
 #include "WiflyHTTPClient.h"
 #include <EEPROM.h>
 #include "Seeed_QTouch.h"
+#include <MemoryFree.h>
 
 /*
  * Hardware configuration
@@ -22,13 +23,13 @@ char keys[ROWS][COLS] = {
 byte rowPins[ROWS] = {12, 11, 10, 9}; //connect to the row pinouts of the keypad
 byte colPins[COLS] = {8, 7, 6}; //connect to the column pinouts of the keypad
 
-const int DOOR_STRIKE_PIN   = 2;
-const int PIR_PIN           = 3;
-const int WIFLY_RX_PIN      = 4;
-const int WIFLY_TX_PIN      = 5;
-const int INDOOR_BUTTON     = 14;
+const char DOOR_STRIKE_PIN   = 2;
+const char PIR_PIN           = 3;
+const char WIFLY_RX_PIN      = 4;
+const char WIFLY_TX_PIN      = 5;
+const char INDOOR_BUTTON     = 14;
 
-const int TOUCH_OUTDOOR_PIN = 3;
+const char TOUCH_OUTDOOR_PIN = 3;
 
 #define SSID      "DATACOMP"
 #define KEY       "DataC0mp2014!"
@@ -36,7 +37,7 @@ const int TOUCH_OUTDOOR_PIN = 3;
 
 #define HTTP_GET_URL "http://172.26.75.139:3000/messages/poll"
 #define HTTP_POST_URL "http://172.26.75.139:3000/messages/confirm"
-#define HTTP_LOG_URL "http://172.26.75.139:3000/log"
+#define HTTP_LOG_URL "http://172.26.75.139:3000/events/log"
 
 /*
  * Set up libraries
@@ -84,10 +85,15 @@ char cursorY = 0;
 char colorR = 0, colorG = 0, colorB = 0;
 
 char mode = MODE_PIN;
+int freeMem;
 
 void setup() {
+    freeMem = freeMemory();
+  
     Serial.begin(9600);
     wifly_uart.begin(9600);
+    Serial.print(freeMem);
+    Serial.println(F("b free"));
   
     pinMode(DOOR_STRIKE_PIN, OUTPUT);
     pinMode(PIR_PIN, INPUT);
@@ -95,7 +101,7 @@ void setup() {
     
     lcd.begin(16, 2);     // set up the LCD's number of columns and rows:
     lcd.setColorWhite();    // Turn backlight off
-    lcd.print("Connecting...");
+    lcd.print(F("Connecting..."));
     
     QTouch.calibrate();
     
@@ -113,12 +119,12 @@ void setup() {
 
 void joinNetwork(){
   if (!wifly.isAssociated(SSID)) {
-    Serial.println("WiFi Connecting");
+    Serial.println(F("Connect"));
     while (!wifly.join(SSID, KEY, AUTH)) {
-      Serial.println("Failed");
+      Serial.println(F("Err"));
       delay(100);
     }
-    Serial.println("OK");
+    Serial.println(F("OK"));
     
     wifly.save();    // save configuration
   }
@@ -143,7 +149,7 @@ void enterPinEntryMode() {
 }
 
 boolean checkPin(char supplied_pin[], char correct_pin[]){
-  Serial.print("Entered PIN: ");
+  //Serial.print("Entered PIN: ");
   for(int i=0; i<PIN_LENGTH; i++){
     Serial.print(supplied_pin[i]);
   }
@@ -179,7 +185,7 @@ void unlockDoor(String message){
 }
 
 void relockDoor() {
-  Serial.println("Relock");
+  Serial.println(F("Relock"));
   enterPinEntryMode(); 
   digitalWrite(DOOR_STRIKE_PIN, LOW);
 }
@@ -200,17 +206,22 @@ void checkForKey(){
           setColor(0,255,0);
           String user;
           if(slot == -1) {
-            Serial.println("Admin");
+            Serial.println(F("Admin"));
             user = "Admin";
           }
           else{
             user = userName(slot); 
           }
-          return unlockDoor("Welcome, " + user + "!");
+          unlockDoor("Welcome, " + user + "!");
+          char msg[] = {'P','I','N','1',pin[0],pin[1],pin[2],pin[3]};
+          sendLog(msg);
+          return;
         }
         else{
           setColor(255,0,0);
           clearAndPrint("Incorrect PIN!");
+          char msg[] = {'P','I','N','0',pin[0],pin[1],pin[2],pin[3]};
+          sendLog(msg);
           delay(2000);
           pinTries++;
           
@@ -218,6 +229,8 @@ void checkForKey(){
              clearAndPrint(" GET AWAY THIEF");
              setCursor(0,1);
              lcd.print(" OWNER NOTIFIED");
+             char msg[] = {'P','I','N','!',pin[0],pin[1],pin[2],pin[3]};
+             sendLog(msg);
              delay(LOCKOUT_TIME);
              pinTries = 0;
           }
@@ -268,7 +281,7 @@ String userName(int slot){
   int i = 0;
   for(i=0; i<16; i++){
     char c = userRead(slot, i + 7);
-    Serial.print(c);
+    //Serial.print(c);
     if(c == '#') break;
     str[i] = c;
   }
@@ -278,21 +291,21 @@ String userName(int slot){
 
 int findFreeUserAddress() {
   for(int i=0; i<MAX_USERS; i++){
-    Serial.print(i, DEC);
-    Serial.println(userExists(i), DEC);
+    //Serial.print(i, DEC);
+    //Serial.println(userExists(i), DEC);
     if(!userExists(i)) return i;
   }
   return -1;
 }
 
 int findUser(String id){
-  Serial.println("Looking for user" + id);
+  //Serial.println("Looking for user" + id);
   for(int i=0; i<MAX_USERS; i++){
-    Serial.print(i, DEC);
-    Serial.print(userExists(i), DEC);
+    //Serial.print(i, DEC);
+    //Serial.print(userExists(i), DEC);
     if(userExists(i)){
-      Serial.print((char) EEPROM.read(i * 32 + 1));
-      Serial.print((char) EEPROM.read(i * 32 + 2));
+      //Serial.print((char) EEPROM.read(i * 32 + 1));
+      //Serial.print((char) EEPROM.read(i * 32 + 2));
       if(EEPROM.read(i * 32 + 1) == id.charAt(0) && EEPROM.read(i * 32 + 2) == id.charAt(1)) return i;
     }
     
@@ -301,10 +314,10 @@ int findUser(String id){
 }
 
 void writeUserData(int slot, String payload){
-  Serial.print("Slot ");
-  Serial.println(slot, DEC);
+  //Serial.print("Slot ");
+  //Serial.println(slot, DEC);
   for(int i=0; i<payload.length(); i++){
-    Serial.write(payload.charAt(i));
+    //Serial.write(payload.charAt(i));
     EEPROM.write(slot * 32 + i + 1, payload.charAt(i));
   }
   EEPROM.write(slot * 32, '1');
@@ -331,7 +344,7 @@ void setCursor(char x, char y){
 
 void checkForRemoteMessage() {
     
-    Serial.println("Polling");
+    Serial.println("P");
     debugChar('P');
     timeSinceLastPoll = millis();
     
@@ -387,19 +400,19 @@ void checkForRemoteMessage() {
       String userId = payload.substring(0, 2);
       int slot = findUser(userId);
       if(slot >= 0){
-        Serial.println("Updating user");
+        Serial.println(F("Updating user"));
         // Copy to EEPROM
         writeUserData(slot, payload);
       }
       else{
-        Serial.println("Adding user");
+        Serial.println(F("Adding user"));
         slot = findFreeUserAddress();
         if(slot >= 0){
           // Copy to EEPROM
           writeUserData(slot, payload);
         }
         else{
-          Serial.println("No space");
+          Serial.println(F("No space"));
           return;
         }
       }
@@ -416,6 +429,13 @@ void checkForRemoteMessage() {
 
 }
 
+void sendLog(char message[]){
+  debugChar('L');
+  Serial.print(F("Log: "));
+  Serial.println(http.post(HTTP_LOG_URL, message, 10000) >= 0 ? "OK" : "Err");
+  debugChar(' ');
+}
+
 void checkForButton(){
   digitalWrite(DOOR_STRIKE_PIN, digitalRead(INDOOR_BUTTON));
 }
@@ -429,6 +449,12 @@ void checkForMotion(){
 }
 
 void loop() {
+    
+    if(freeMem != freeMemory()){
+      freeMem = freeMemory();
+      Serial.print(freeMem);
+      Serial.println(F("b free"));
+    }
     checkForMotion();
     if(mode == MODE_OPEN){
       checkForTouch(); 
