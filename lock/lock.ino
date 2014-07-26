@@ -27,6 +27,7 @@ const char DOOR_STRIKE_PIN   = 2;
 const char PIR_PIN           = 3;
 const char WIFLY_RX_PIN      = 4;
 const char WIFLY_TX_PIN      = 5;
+const char BUZZER_PIN        = 13;
 const char INDOOR_BUTTON     = 14;
 
 const char TOUCH_OUTDOOR_PIN = 3;
@@ -98,6 +99,7 @@ void setup() {
     pinMode(DOOR_STRIKE_PIN, OUTPUT);
     pinMode(PIR_PIN, INPUT);
     pinMode(INDOOR_BUTTON, INPUT);
+    pinMode(BUZZER_PIN, OUTPUT);
     
     lcd.begin(16, 2);     // set up the LCD's number of columns and rows:
     lcd.setColorWhite();    // Turn backlight off
@@ -182,18 +184,29 @@ void unlockDoor(String message){
   clearAndPrint(message);
   mode = MODE_OPEN;
   unlocked_at = millis();
+  beep(60);
+  delay(50);
+  beep(200);
 }
 
 void relockDoor() {
   Serial.println(F("Relock"));
   enterPinEntryMode(); 
   digitalWrite(DOOR_STRIKE_PIN, LOW);
+  beep(50);
+}
+
+void beep(int duration){
+  digitalWrite(BUZZER_PIN, HIGH);
+  delay(duration);
+  digitalWrite(BUZZER_PIN, LOW);
 }
 
 /* See if a key has been pressed, and deal with it if so */
 void checkForKey(){
     char key = keypad.getKey();
     if (key){
+      beep(20);
       if(key == RESET_KEY) return enterPinEntryMode();
       
       lcd.print('*');
@@ -220,6 +233,7 @@ void checkForKey(){
         else{
           setColor(255,0,0);
           clearAndPrint("Incorrect PIN!");
+          beep(500);
           char msg[] = {'P','I','N','0',pin[0],pin[1],pin[2],pin[3]};
           sendLog(msg);
           delay(2000);
@@ -229,6 +243,7 @@ void checkForKey(){
              clearAndPrint("GET AWAY, THIEF!");
              setCursor(0,1);
              lcd.print(" OWNER NOTIFIED");
+             beep(500);
              char msg[] = {'P','I','N','!',pin[0],pin[1],pin[2],pin[3]};
              sendLog(msg);
              delay(LOCKOUT_TIME);
