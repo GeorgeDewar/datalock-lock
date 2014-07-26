@@ -432,7 +432,7 @@ void checkForRemoteMessage() {
         }
       }
     }
-    else if(command.equals("RMU")){
+    else if(command.equals("REM")){
        String userId = response.substring(0, 2);
        int slot = findUser(userId);
        if(slot >= 0){
