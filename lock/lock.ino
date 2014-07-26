@@ -36,6 +36,7 @@ const int TOUCH_OUTDOOR_PIN = 3;
 
 #define HTTP_GET_URL "http://172.26.75.139:3000/messages/poll"
 #define HTTP_POST_URL "http://172.26.75.139:3000/messages/confirm"
+#define HTTP_LOG_URL "http://172.26.75.139:3000/log"
 
 /*
  * Set up libraries
@@ -334,7 +335,10 @@ void checkForRemoteMessage() {
     debugChar('P');
     timeSinceLastPoll = millis();
     
-    while (http.get(HTTP_GET_URL, 2000) < 0) { // wait 
+    if (http.get(HTTP_GET_URL, 1000) < 0) {
+      debugChar(' ');
+      timeSinceLastPoll = millis();
+      return;
     }
     
     char c;
