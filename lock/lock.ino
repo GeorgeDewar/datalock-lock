@@ -226,7 +226,7 @@ void checkForKey(){
           pinTries++;
           
           if(pinTries == MAX_PIN_TRIES){
-             clearAndPrint(" GET AWAY THIEF");
+             clearAndPrint("GET AWAY, THIEF!");
              setCursor(0,1);
              lcd.print(" OWNER NOTIFIED");
              char msg[] = {'P','I','N','!',pin[0],pin[1],pin[2],pin[3]};
