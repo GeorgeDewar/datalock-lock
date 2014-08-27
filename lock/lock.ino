@@ -103,24 +103,28 @@ void setup() {
     
     lcd.begin(16, 2);     // set up the LCD's number of columns and rows:
     lcd.setColorWhite();    // Turn backlight off
-    lcd.print(F("Connecting..."));
+    
     
     QTouch.calibrate();
-    
-    joinNetwork();   
-    enterPinEntryMode();
-    
-    if(EEPROM.read(511) != '1'){
+          
+    if(EEPROM.read(511) != '1' || digitalRead(INDOOR_BUTTON)){
       // Initialize EEPROM
+      lcd.print(F("Clearing Memory"));
       for(int i=0; i<511; i++){
         EEPROM.write(i, 0); 
       }
       EEPROM.write(511, '1');
+      delay(500);
+      lcd.clear();
     }
+    
+    joinNetwork();  
+    enterPinEntryMode();
 }
 
 void joinNetwork(){
   if (!wifly.isAssociated(SSID)) {
+    lcd.print(F("Connecting..."));
     Serial.println(F("Connect"));
     while (!wifly.join(SSID, KEY, AUTH)) {
       Serial.println(F("Err"));
