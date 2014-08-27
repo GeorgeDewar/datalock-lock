@@ -468,7 +468,14 @@ void checkForButton(){
 }
 
 void checkForTouch(){
-   digitalWrite(DOOR_STRIKE_PIN, QTouch.isTouch(TOUCH_OUTDOOR_PIN) || digitalRead(INDOOR_BUTTON)); 
+  boolean isTouched = QTouch.isTouch(TOUCH_OUTDOOR_PIN) || digitalRead(INDOOR_BUTTON);
+  if(isTouched) {
+    setColor(0,255,255);
+  }
+  else{
+    setColor(0,255,0);
+  }
+  digitalWrite(DOOR_STRIKE_PIN, isTouched); 
 }
 
 void checkForMotion(){
